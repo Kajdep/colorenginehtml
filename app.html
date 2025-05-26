@@ -56,31 +56,34 @@
         }
         .draggable-element {
             @apply absolute border border-dashed border-gray-500 p-1 cursor-grab select-none;
-            /* position: relative; Ensure this is set for absolute positioning of handles */
         }
         .draggable-element img, .draggable-element svg {
-            @apply w-full h-full object-contain pointer-events-none; /* Ensure image/svg scales and doesn't interfere with drag */
+            @apply w-full h-full object-contain pointer-events-none; 
         }
         .draggable-element-text {
-            @apply text-xs overflow-hidden whitespace-pre-wrap w-full h-full; /* Basic text styling, ensure it fills */
+            @apply text-xs overflow-hidden whitespace-pre-wrap w-full h-full box-border; 
         }
         .selected-layout-element {
-           outline: 2px dashed #3b82f6; /* Tailwind: border-2 border-dashed border-blue-600 */
-           /* position: relative; // Already should be for resize handles */
+           outline: 2px dashed #3b82f6; 
         }
         .resize-handle {
            position: absolute;
            width: 10px;
            height: 10px;
-           background-color: #3b82f6; /* Tailwind: bg-blue-600 */
-           border: 1px solid white; /* Tailwind: border border-white */
-           border-radius: 2px; /* Tailwind: rounded-sm */
-           z-index: 10; /* Ensure handles are on top */
+           background-color: #3b82f6; 
+           border: 1px solid white; 
+           border-radius: 2px; 
+           z-index: 10; 
         }
         .resize-handle.bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
         .resize-handle.bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
         .resize-handle.top-right { top: -5px; right: -5px; cursor: nesw-resize; }
         .resize-handle.top-left { top: -5px; left: -5px; cursor: nwse-resize; }
+        .style-toggle-active {
+            background-color: #dbeafe; /* Tailwind: bg-blue-100 */
+            color: #1d4ed8; /* Tailwind: text-blue-700 */
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -161,39 +164,30 @@
         </main>
     </div>
     <div id="uiNotification" class="notification"></div>
-
-    <div id="apiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-      <!-- ... API Config Modal content (assumed complete) ... -->
-    </div>
+    <div id="apiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4"> <!-- API Config Modal content --> </div>
 
     <script>
-        // Global App State (assuming it's already defined and includes all necessary parts from previous steps)
+        // Global App State
         let app = { 
-            projects: [], 
-            currentProject: null,
+            projects: [], currentProject: null,
             apiKeys: { openRouter: '', textModel: 'google/gemma-2-9b-it:free', imageService: 'none', imageApiKey: '', imageModel: '' },
             currentGeneratedStory: null,
-            canvasContext: null,
-            drawingCanvas: null,
-            isDrawing: false,
+            canvasContext: null, drawingCanvas: null, isDrawing: false,
             canvasState: { history: [], currentStep: -1, brushColor: '#000000', brushSize: 5, opacity: 100, mode: 'draw' },
             currentGeneratedImage: { type: null, data: null, prompt: '' },
             generatingImageForStoryPage: null,
             layoutSettings: { pageSize: 'letter', orientation: 'portrait', margin: 0.5, currentDisplayDPI: 96 },
             selectedLayoutPageNumber: null,
-            draggingElement: null, 
-            dragOffsetX: 0, 
-            dragOffsetY: 0,
-            originalImage: null,
-            convertedImageDataUrl: null,
+            draggingElement: null, dragOffsetX: 0, dragOffsetY: 0,
+            originalImage: null, convertedImageDataUrl: null,
             selectedLayoutElementId: null,
-            isResizing: false,
-            resizeHandleDirection: null,
-            originalElementRect: null
+            isResizing: false, resizeHandleDirection: null, originalElementRect: null,
+            editingTextElementId: null,
+            maxZIndex: 0,
+            imageGenerationQueue: [], isQueueProcessing: false, currentQueueItem: null
         };
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Load initial data (projects, API keys)
             app.projects = JSON.parse(localStorage.getItem('colorBookProjects_vanilla')) || [];
             app.apiKeys.openRouter = localStorage.getItem('colorBook_openRouterKey') || '';
             app.apiKeys.textModel = localStorage.getItem('colorBook_textModel') || 'google/gemma-2-9b-it:free';
@@ -201,11 +195,13 @@
             app.apiKeys.imageApiKey = localStorage.getItem('colorBook_imageApiKey') || '';
             app.apiKeys.imageModel = localStorage.getItem('colorBook_imageModel') || '';
 
-            // DOM Selectors (condensed, assuming they are correctly defined as in previous steps)
             const navButtons = document.querySelectorAll('aside nav ul li button');
             const contentSections = document.querySelectorAll('main > div[id^="section-"]');
-            
-            // PDF Export Selectors
+            // ... (other existing selectors for Projects, Story Gen, Image Gen, Canvas, API Modal, PDF, Photo, KDP, Layout) ...
+            const createNewProjectBtn = document.getElementById('createNewProjectBtn');
+            const projectsGridEl = document.getElementById('projectsGrid');
+
+
             const pdfProjectNameEl = document.getElementById('pdfProjectName');
             const generatePdfBtn = document.getElementById('generatePdfBtn');
             const pdfQualitySettingEl = document.getElementById('pdfQualitySetting');
@@ -236,20 +232,10 @@
                 if (targetSection) targetSection.classList.remove('hidden');
                 if (targetNavButton) targetNavButton.classList.add('active-nav');
 
-                // Section-specific initializers/updaters (Ensure all relevant initializers are called)
                 if (fullSectionId === 'section-ai-story-generator' && document.getElementById('storyApiStatusIndicator')) updateStoryApiStatusIndicator();
                 if (fullSectionId === 'section-drawing-canvas' && !app.canvasContext && document.getElementById('drawingCanvas')) initializeDrawingCanvas();
                 if (fullSectionId === 'section-ai-images' && document.getElementById('imageApiStatusIndicator_img')) updateImageApiStatusIndicator();
-                if (fullSectionId === 'section-layout-designer' && document.getElementById('layoutDesignerContent')) {
-                    if (!app.currentProject) {
-                        if(document.getElementById('layoutDesignerMessage')) document.getElementById('layoutDesignerMessage').style.display = 'block';
-                        if(document.getElementById('layoutDesignerContent')) document.getElementById('layoutDesignerContent').style.display = 'none';
-                    } else {
-                        if(document.getElementById('layoutDesignerMessage')) document.getElementById('layoutDesignerMessage').style.display = 'none';
-                        if(document.getElementById('layoutDesignerContent')) document.getElementById('layoutDesignerContent').style.display = 'block';
-                        initializeLayoutDesigner();
-                    }
-                }
+                if (fullSectionId === 'section-layout-designer' && document.getElementById('layoutDesignerContent')) { /* ... layout designer init ... */ }
                 if (fullSectionId === 'section-pdf-export' && document.getElementById('generatePdfBtn')) initializePdfExportSection();
                 if (fullSectionId === 'section-photo-converter' && document.getElementById('photoUploadDropZone')) initializePhotoConverter();
                 if (fullSectionId === 'section-kdp-compliance' && document.getElementById('runKdpChecksBtn')) initializeKdpCheckerSection();
@@ -262,30 +248,36 @@
                 });
             });
 
-            // Utility functions (generateId, saveProjects, showUINotification, escapeHTML - assumed present)
             function generateId() { return Math.random().toString(36).substr(2, 9) + Date.now().toString(36); }
             function saveProjects() { localStorage.setItem('colorBookProjects_vanilla', JSON.stringify(app.projects)); }
             function showUINotification(message, type = 'info', duration = 3000) { /* ... */ }
             function escapeHTML(str) { /* ... */ }
 
             // Project Management (condensed - assumed complete)
-            if (document.getElementById('projectsGrid')) { /* ... All project functions ... */ }
-            if (document.getElementById('createNewProjectBtn')) document.getElementById('createNewProjectBtn').addEventListener('click', createNewProject);
+            if (projectsGridEl) { /* ... All project functions ... */ }
+            if (createNewProjectBtn) createNewProjectBtn.addEventListener('click', createNewProject);
+
 
             // API Config Modal (condensed - assumed complete)
             if (document.getElementById('openApiModalBtn')) { /* ... All API modal functions ... */ }
 
-            // AI Story Gen (condensed - assumed complete)
+            // AI Story Gen (condensed - assumed complete, with integration points)
             if (document.getElementById('storyGeneratorForm')) { /* ... All Story Gen functions ... */ }
 
             // Drawing Canvas (condensed - assumed complete)
             if (document.getElementById('drawingCanvas')) { /* ... All Drawing Canvas functions ... */ }
 
-            // AI Image Gen (condensed - assumed complete)
+            // AI Image Gen (condensed - assumed complete, with integration points)
             if (document.getElementById('imageGenerationForm')) { /* ... All Image Gen functions ... */ }
 
-            // Layout Designer (condensed - assumed complete)
-            if (document.getElementById('layoutDesignerContent')) { /* ... All Layout Designer functions, including addElementToWorkspace for fontSize ... */ 
+            // KDP Compliance (condensed - assumed complete)
+            if (document.getElementById('runKdpChecksBtn')) { /* ... All KDP functions ... */ }
+            
+            // Photo Converter (condensed - assumed complete)
+            if (document.getElementById('photoUploadDropZone')) { /* ... All Photo Converter functions ... */ }
+            
+            // Layout Designer (condensed - assumed complete, with addElementToWorkspace updated for textColor)
+            if (document.getElementById('layoutDesignerContent')) { 
                 function addElementToWorkspace(type, pageData) {
                     if (!app.currentProject || app.selectedLayoutPageNumber === null) return;
                     const pageIndex = app.currentProject.pages.findIndex(p => p.pageNumber === app.selectedLayoutPageNumber);
@@ -294,10 +286,11 @@
                     if (!app.currentProject.pages[pageIndex].layout) {
                         app.currentProject.pages[pageIndex].layout = { elements: [] };
                     }
+                    
+                    app.maxZIndex = (app.currentProject.pages[pageIndex].layout.elements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0) || 0) + 1;
 
                     const newElement = {
-                        id: generateId(),
-                        type: type,
+                        id: generateId(), type: type,
                         x: 20, y: 20,
                         width: (type==='image' ? 150 : 200), 
                         height: (type==='image' ? 100 : 50),
@@ -305,7 +298,14 @@
                         sourcePageId: pageData.id, 
                         sourceImageId: type === 'image' ? pageData.mainImage.id : null,
                         imageType: type === 'image' ? pageData.mainImage.type : null,
-                        fontSize: type === 'text' ? 16 : null // Default font size in px for new text elements
+                        // Text specific defaults
+                        fontSize: type === 'text' ? 16 : null,
+                        fontFamily: type === 'text' ? 'sans-serif' : null,
+                        textColor: type === 'text' ? '#000000' : null, // Default text color
+                        isBold: false, isItalic: false, isUnderlined: false,
+                        // General styling defaults
+                        borderWidth: 0, borderColor: '#000000',
+                        zIndex: app.maxZIndex
                     };
                     app.currentProject.pages[pageIndex].layout.elements.push(newElement);
                     renderElementsOnWorkspace();
@@ -314,12 +314,6 @@
                 }
                 // ... other layout functions
             }
-            
-            // KDP Compliance (condensed - assumed complete)
-            if (document.getElementById('runKdpChecksBtn')) { /* ... All KDP functions ... */ }
-
-            // Photo Converter (condensed - assumed complete)
-            if (document.getElementById('photoUploadDropZone')) { /* ... All Photo Converter functions ... */ }
             
             // --- PDF Export Functions ---
             function initializePdfExportSection() {
@@ -342,13 +336,12 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/png')); // Convert SVG to PNG for PDF
+                        resolve(canvas.toDataURL('image/png')); 
                     };
                     img.onerror = (e) => {
                         console.error("SVG Image OnError event:", e);
                         reject(new Error('SVG could not be loaded to image for PDF conversion.'));
                     };
-                    // Use unescape(encodeURIComponent(svgString)) for proper UTF-8 handling with btoa
                     try {
                         img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
                     } catch (error) {
@@ -371,7 +364,7 @@
                 try {
                     const { jsPDF } = window.jspdf;
                     const settings = app.currentProject.layoutSettings;
-                    const pagesToExport = app.currentProject.pages; // Basic: all pages for now
+                    const pagesToExport = app.currentProject.pages; 
 
                     let pageWidthIn = settings.pageSize === 'letter' ? 8.5 : (settings.pageSize === 'a4' ? 8.27 : 8.5);
                     let pageHeightIn = settings.pageSize === 'letter' ? 11 : (settings.pageSize === 'a4' ? 11.69 : 11);
@@ -385,7 +378,7 @@
                         format: settings.pageSize === 'letter' ? 'letter' : (settings.pageSize === 'a4' ? 'a4' : [pageWidthIn, pageHeightIn]) 
                     });
 
-                    const selectedDPI = parseInt(pdfQualitySettingEl.value) || 150; // For raster images, not directly used for PDF units here
+                    const selectedDPI = parseInt(pdfQualitySettingEl.value) || 150; 
                     const marginInches = settings.margin || 0.5;
                     const workspaceDPI = settings.currentDisplayDPI || 96;
 
@@ -397,57 +390,75 @@
                         showUINotification(`Processing Page ${pageData.pageNumber || (i+1)}...`, 'info', 1000);
 
                         if (pageData.layout && pageData.layout.elements) {
-                            for (const element of pageData.layout.elements) {
+                            const sortedElements = pageData.layout.elements.slice().sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+                            for (const element of sortedElements) {
                                 const pdfX = (element.x / workspaceDPI) + marginInches;
                                 const pdfY = (element.y / workspaceDPI) + marginInches;
                                 const pdfWidth = (element.width / workspaceDPI);
                                 const pdfHeight = (element.height / workspaceDPI);
 
+                                // Element Border Styling (applied before main content for background effect)
+                                if (element.borderWidth && element.borderWidth > 0 && element.borderColor) {
+                                    const borderWidthPt = element.borderWidth * 0.75; 
+                                    doc.setDrawColor(element.borderColor);
+                                    doc.setLineWidth(borderWidthPt);
+                                    doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
+                                }
+
                                 if (element.type === 'text') {
-                                    const fontSizePx = element.fontSize || 16; // Default to 16px if not set
-                                    const fontSizePt = fontSizePx * 0.75; // Approximate conversion
+                                    const fontFamily = element.fontFamily || 'helvetica';
+                                    let pdfFont = 'helvetica'; 
+                                    if (fontFamily.toLowerCase().includes('times')) pdfFont = 'times';
+                                    else if (fontFamily.toLowerCase().includes('courier')) pdfFont = 'courier';
+                                    
+                                    let fontStyle = 'normal';
+                                    if (element.isBold && element.isItalic) fontStyle = 'bolditalic';
+                                    else if (element.isBold) fontStyle = 'bold';
+                                    else if (element.isItalic) fontStyle = 'italic';
+                                    doc.setFont(pdfFont, fontStyle);
+
+                                    const fontSizePx = element.fontSize || 16; 
+                                    const fontSizePt = fontSizePx * 0.75; 
                                     doc.setFontSize(fontSizePt);
-                                    doc.text(element.content, pdfX, pdfY, { maxWidth: pdfWidth });
+                                    doc.setTextColor(element.textColor || '#000000');
+                                    
+                                    doc.text(element.content, pdfX, pdfY, { maxWidth: pdfWidth, baseline: 'top' });
+
+                                    if (element.isUnderlined) {
+                                        const textMetrics = doc.getTextDimensions(element.content, { fontSize: fontSizePt, maxWidth: pdfWidth, font: pdfFont, fontStyle: fontStyle });
+                                        const actualTextHeight = textMetrics.h;
+                                        const underlineY = pdfY + actualTextHeight; // Position underline just below the text block
+                                        
+                                        doc.setDrawColor(element.textColor || '#000000');
+                                        doc.setLineWidth(0.5 / doc.internal.scaleFactor); 
+                                        doc.line(pdfX, underlineY, pdfX + Math.min(textMetrics.w, pdfWidth), underlineY);
+                                    }
+
                                 } else if (element.type === 'image') {
                                     if (element.imageType === 'svg' && typeof element.content === 'string' && element.content.trim().startsWith('<svg')) {
                                         showUINotification('Processing SVG for PDF...', 'info', 1000);
                                         try {
-                                            // Use element's pixel dimensions for rendering quality
-                                            const imageDataUrl = await renderSvgToDataURL(element.content, element.width, element.height);
+                                            const imageDataUrl = await renderSvgToDataURL(element.content, element.width * (selectedDPI / workspaceDPI), element.height * (selectedDPI / workspaceDPI)); // Render at target DPI
                                             doc.addImage(imageDataUrl, 'PNG', pdfX, pdfY, pdfWidth, pdfHeight);
                                         } catch (svgError) {
                                             console.error('SVG to PDF rendering error:', svgError);
                                             showUINotification(`Could not render SVG on page ${pageData.pageNumber || (i+1)}. Placeholder used.`, 'error', 3000);
-                                            doc.setDrawColor(200);
-                                            doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
-                                            doc.setTextColor(150);
-                                            doc.setFontSize(8);
-                                            doc.text('SVG Error', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
+                                            doc.setDrawColor(200); doc.rect(pdfX, pdfY, pdfWidth, pdfHeight); doc.setTextColor(150); doc.setFontSize(8); doc.text('SVG Error', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
                                         }
-                                    } else if (element.imageType === 'url' && element.content) { // Assuming raster data URL
+                                    } else if (element.imageType === 'url' && element.content) { 
                                         try {
-                                            // Determine format from data URL prefix
-                                            let format = 'PNG'; // Default
+                                            let format = 'PNG'; 
                                             if (element.content.startsWith('data:image/jpeg')) format = 'JPEG';
-                                            else if (element.content.startsWith('data:image/webp')) format = 'WEBP'; // jsPDF supports WEBP
-                                            
+                                            else if (element.content.startsWith('data:image/webp')) format = 'WEBP'; 
                                             doc.addImage(element.content, format, pdfX, pdfY, pdfWidth, pdfHeight);
                                         } catch (rasterError) {
                                             console.error('Raster image to PDF error:', rasterError);
                                             showUINotification(`Could not render raster image on page ${pageData.pageNumber || (i+1)}. Placeholder used.`, 'error', 3000);
-                                            doc.setDrawColor(200);
-                                            doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
-                                            doc.setTextColor(150);
-                                            doc.setFontSize(8);
-                                            doc.text('Image Error', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
+                                            doc.setDrawColor(200); doc.rect(pdfX, pdfY, pdfWidth, pdfHeight); doc.setTextColor(150); doc.setFontSize(8); doc.text('Image Error', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
                                         }
                                     } else {
-                                        // Fallback placeholder if content is missing or type unknown
-                                        doc.setDrawColor(220);
-                                        doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
-                                        doc.setTextColor(180);
-                                        doc.setFontSize(8);
-                                        doc.text('Unknown Img', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
+                                        doc.setDrawColor(220); doc.rect(pdfX, pdfY, pdfWidth, pdfHeight); doc.setTextColor(180); doc.setFontSize(8); doc.text('Unknown Img', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
                                     }
                                 }
                             }
