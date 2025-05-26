@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColorBook Engine Pro - New</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basic global styles if needed */
+        body {
+            font-family: 'Inter', sans-serif; /* Example: Using a common sans-serif font */
+        }
+        /* Ensure smooth scrolling for anchor links if used for navigation */
+        html {
+            scroll-behavior: smooth;
+        }
+        .active-nav {
+            @apply bg-blue-100 text-blue-700 font-semibold;
+        }
+        /* Simple notification style */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        .notification.success {
+            background-color: #4CAF50; /* Green for success */
+        }
+        .notification.error {
+            background-color: #f44336; /* Red for error */
+        }
+        /* Canvas specific styles */
+        .active-tool {
+            @apply ring-2 ring-blue-500 ring-offset-1;
+        }
+        .color-swatch {
+            @apply w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-gray-400;
+        }
+        .template-preview {
+            @apply p-2 border rounded-lg text-xs text-center cursor-pointer hover:bg-gray-100;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-md flex flex-col">
+            <div class="p-6 border-b">
+                <h1 class="text-xl font-bold text-gray-800">ColorBook Engine</h1>
+            </div>
+            <nav class="p-4 flex-grow">
+                <ul class="space-y-2">
+                    <li><button id="nav-dashboard" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none active-nav">Dashboard</button></li>
+                    <li><button id="nav-projects" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">Projects</button></li>
+                    <li><button id="nav-ai-story-generator" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">AI Story Generator</button></li>
+                    <li><button id="nav-ai-images" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">AI Images</button></li>
+                    <li><button id="nav-photo-converter" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">Photo Converter</button></li>
+                    <li><button id="nav-drawing-canvas" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">Drawing Canvas</button></li>
+                    <li><button id="nav-layout-designer" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">Layout Designer</button></li>
+                    <li><button id="nav-kdp-compliance" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">KDP Compliance</button></li>
+                    <li><button id="nav-pdf-export" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 focus:outline-none">PDF Export</button></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t">
+                <button id="openApiModalBtn" class="w-full text-left p-3 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 text-sm text-gray-700">
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.646.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 1.903c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.333.183-.582.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.759 6.759 0 0 1 0-1.903c.007-.378-.137-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                   Configure AI <span id="apiStatusIndicator" class="ml-auto text-xs"></span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-6 overflow-auto">
+            <div id="section-dashboard">
+                <h1 class="text-2xl font-semibold text-gray-800">Dashboard Content</h1>
+                <p class="mt-2 text-gray-600">Welcome to your dashboard. Here you'll find an overview of your projects and quick access to tools.</p>
+            </div>
+            
+            <div id="section-projects" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                  <h1 class="text-3xl font-bold text-gray-900">Projects</h1>
+                  <button id="createNewProjectBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    New Project
+                  </button>
+                </div>
+                <div id="projectsGrid" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <!-- Project cards will be dynamically inserted here -->
+                </div>
+                <div id="noProjectsMessage" class="col-span-full text-center py-12 text-gray-500" style="display: none;">
+                  No projects yet. Create your first project to get started.
+                </div>
+            </div>
+
+            <div id="section-ai-story-generator" class="hidden">
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-3xl font-bold text-gray-900">📖 AI Story Generator</h1>
+                        <div id="storyApiStatusIndicator" class="text-sm p-2 rounded-lg"></div>
+                    </div>
+
+                    <div class="grid gap-6 md:grid-cols-2 mb-8">
+                        <!-- Story Parameters Form -->
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-800">Story Parameters</h2>
+                        <form id="storyGeneratorForm" class="space-y-4">
+                            <div>
+                            <label for="storyTheme" class="block text-sm font-medium text-gray-700 mb-1">Theme/Setting</label>
+                            <input type="text" id="storyTheme" class="w-full p-2.5 border border-gray-300 rounded-lg" placeholder="e.g., Magical forest adventure">
+                            </div>
+                            <div>
+                            <label for="storyCharacters" class="block text-sm font-medium text-gray-700 mb-1">Main Characters</label>
+                            <input type="text" id="storyCharacters" class="w-full p-2.5 border border-gray-300 rounded-lg" placeholder="e.g., Brave rabbit Luna, wise owl Hoot">
+                            </div>
+                            <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Target Age Group</label>
+                            <div class="flex gap-2 items-center">
+                                <input type="number" id="storyAgeMin" min="2" max="18" value="6" class="w-20 p-2 border border-gray-300 rounded-lg">
+                                <span class="text-gray-500">to</span>
+                                <input type="number" id="storyAgeMax" min="2" max="18" value="8" class="w-20 p-2 border border-gray-300 rounded-lg">
+                                <span class="text-gray-500">years, or</span>
+                                <label class="flex items-center ml-2">
+                                <input type="checkbox" id="storyAdultAudience" class="mr-1.5 rounded"> Adult
+                                </label>
+                            </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="storyNumPages" class="block text-sm font-medium text-gray-700 mb-1">Number of Pages</label>
+                                <input type="number" id="storyNumPages" min="1" max="50" value="5" class="w-full p-2.5 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="storyWordsPerPage" class="block text-sm font-medium text-gray-700 mb-1">Words per Page</label>
+                                <input type="number" id="storyWordsPerPage" min="10" max="300" value="50" class="w-full p-2.5 border border-gray-300 rounded-lg">
+                            </div>
+                            </div>
+                            <div>
+                            <label for="storyImageStyle" class="block text-sm font-medium text-gray-700 mb-1">Image Style</label>
+                            <select id="storyImageStyle" class="w-full p-2.5 border border-gray-300 rounded-lg">
+                                <option value="coloring book">Coloring Book Style</option>
+                                <option value="cartoon">Cartoon</option>
+                                <option value="line art">Line Art</option>
+                                <option value="whimsical">Whimsical</option>
+                                <option value="simple sketch">Simple Sketch</option>
+                            </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="storyLineWeight" class="block text-sm font-medium text-gray-700 mb-1">Line Weight: <span id="storyLineWeightValue">3</span></label>
+                                    <input type="range" id="storyLineWeight" min="1" max="10" value="3" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div>
+                                    <label for="storyAspectRatio" class="block text-sm font-medium text-gray-700 mb-1">Aspect Ratio</label>
+                                    <select id="storyAspectRatio" class="w-full p-2.5 border border-gray-300 rounded-lg">
+                                        <option value="square">Square (1:1)</option>
+                                        <option value="landscape">Landscape (4:3)</option>
+                                        <option value="portrait">Portrait (3:4)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                            <label for="storyMoral" class="block text-sm font-medium text-gray-700 mb-1">Moral/Lesson (Optional)</label>
+                            <input type="text" id="storyMoral" class="w-full p-2.5 border border-gray-300 rounded-lg" placeholder="e.g., The importance of kindness">
+                            </div>
+                            <button type="submit" id="generateStoryBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.5 13.5h-8.25a.75.75 0 0 0 0 1.5h8.25a.75.75 0 0 0 0-1.5Z" /></svg>
+                            Generate Story + Prompts
+                            </button>
+                        </form>
+                        </div>
+
+                        <!-- Generated Story Display -->
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-800">Generated Story</h2>
+                        <div id="storyDisplayArea" class="bg-gray-50 rounded-lg p-4 min-h-[400px] border-2 border-dashed border-gray-200 max-h-[500px] overflow-y-auto">
+                            <div class="text-center text-gray-500 flex items-center justify-center h-full">
+                            Your AI-generated story cards will appear here.
+                            </div>
+                        </div>
+                        <div id="storyActionButtons" class="mt-4 flex gap-2" style="display: none;">
+                            <button id="saveStoryToProjectBtn" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Save to Project</button>
+                        </div>
+                        </div>
+                    </div>
+                    <div id="storyGenerationProgress" class="mt-4 text-center" style="display: none;">
+                        <p class="text-blue-600">Generating story... please wait.</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                            <div id="storyProgressFill" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-ai-images" class="hidden">
+                <h1 class="text-2xl font-semibold text-gray-800">AI Images Content</h1>
+                <p class="mt-2 text-gray-600">Create unique images using AI algorithms. Ensure API keys are configured.</p>
+            </div>
+            <div id="section-photo-converter" class="hidden">
+                <h1 class="text-2xl font-semibold text-gray-800">Photo Converter Content</h1>
+                <p class="mt-2 text-gray-600">Convert photos into various styles like coloring book pages.</p>
+            </div>
+            
+            <div id="section-drawing-canvas" class="hidden">
+                <div class="max-w-7xl mx-auto">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">🖌️ Drawing Canvas</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <!-- Tools Panel -->
+                      <div class="md:col-span-1 bg-white rounded-lg shadow-md p-4 space-y-5">
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">Mode</label>
+                          <div class="grid grid-cols-2 gap-2">
+                            <button id="drawModeBtn" class="p-2 border rounded-lg text-sm font-medium active-tool">Draw</button>
+                            <button id="eraseModeBtn" class="p-2 border rounded-lg text-sm font-medium hover:bg-gray-100">Erase</button>
+                          </div>
+                        </div>
+              
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">Colors</label>
+                          <div id="colorPaletteContainer" class="grid grid-cols-6 gap-1 mb-2">
+                            <!-- Colors will be added by JS -->
+                          </div>
+                          <input type="color" id="customColorInput" class="w-full h-8 border border-gray-300 rounded-lg" value="#000000">
+                        </div>
+              
+                        <div>
+                          <label for="brushSizeSlider" class="block text-sm font-medium text-gray-700 mb-1">Brush Size: <span id="brushSizeValue">5</span></label>
+                          <input type="range" id="brushSizeSlider" min="1" max="50" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+              
+                        <div>
+                          <label for="opacitySlider" class="block text-sm font-medium text-gray-700 mb-1">Opacity: <span id="opacityValue">100</span>%</label>
+                          <input type="range" id="opacitySlider" min="10" max="100" value="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">Templates</label>
+                          <div id="templateContainer" class="grid grid-cols-3 gap-2">
+                              <!-- Templates will be added by JS -->
+                          </div>
+                        </div>
+              
+                        <div class="space-y-2 pt-4 border-t">
+                          <button id="undoCanvasBtn" class="w-full p-2 border rounded-lg hover:bg-gray-100 text-sm">Undo</button>
+                          <button id="redoCanvasBtn" class="w-full p-2 border rounded-lg hover:bg-gray-100 text-sm">Redo</button>
+                          <button id="clearCanvasBtn" class="w-full p-2 border rounded-lg bg-red-500 text-white hover:bg-red-600 text-sm">Clear Canvas</button>
+                          <button id="saveCanvasBtn" class="w-full p-2 border rounded-lg bg-green-500 text-white hover:bg-green-600 text-sm">Save as PNG</button>
+                        </div>
+                      </div>
+              
+                      <!-- Canvas Area -->
+                      <div class="md:col-span-3 bg-white rounded-lg shadow-md p-4 flex justify-center items-center">
+                        <canvas id="drawingCanvas" width="800" height="600" class="border-2 border-gray-300 rounded-md max-w-full"></canvas>
+                      </div>
+                    </div>
+                  </div>
+            </div>
+
+            <div id="section-layout-designer" class="hidden">
+                <h1 class="text-2xl font-semibold text-gray-800">Layout Designer Content</h1>
+                <p class="mt-2 text-gray-600">Design and arrange layouts for your book pages.</p>
+            </div>
+            <div id="section-kdp-compliance" class="hidden">
+                <h1 class="text-2xl font-semibold text-gray-800">KDP Compliance Content</h1>
+                <p class="mt-2 text-gray-600">Tools and checkers for KDP compliance.</p>
+            </div>
+            <div id="section-pdf-export" class="hidden">
+                <h1 class="text-2xl font-semibold text-gray-800">PDF Export Content</h1>
+                <p class="mt-2 text-gray-600">Export your projects to PDF format.</p>
+            </div>
+        </main>
+    </div>
+    <div id="uiNotification" class="notification"></div>
+
+    <div id="apiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto shadow-xl">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">🤖 AI Configuration</h2>
+        
+        <div class="space-y-4 mb-6">
+          <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">📝 Text Generation (OpenRouter)</h3>
+          <div>
+            <label for="openRouterKeyInput" class="block text-sm font-medium text-gray-700 mb-1">OpenRouter API Key</label>
+            <input type="password" id="openRouterKeyInput" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="sk-or-v1-...">
+            <p class="text-xs text-gray-500 mt-1">Get your key at <a href="https://openrouter.ai/keys" target="_blank" class="text-blue-500 hover:underline">openrouter.ai/keys</a>. Many models are free.</p>
+          </div>
+          <div>
+            <label for="aiModelSelect" class="block text-sm font-medium text-gray-700 mb-1">Preferred Text Model</label>
+            <select id="aiModelSelect" class="w-full p-3 border border-gray-300 rounded-lg">
+              <optgroup label="Free Models">
+                <option value="google/gemma-2-9b-it:free">Gemma 2 9B (Google)</option>
+                <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Meta)</option>
+                <option value="microsoft/phi-3-mini-128k-instruct:free">Phi-3 Mini (Microsoft)</option>
+              </optgroup>
+              <optgroup label="Paid Models">
+                <option value="openai/gpt-4o">GPT-4o (OpenAI)</option>
+                <option value="anthropic/claude-3-5-sonnet">Claude 3.5 Sonnet (Anthropic)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        
+        <div class="space-y-4 mb-6 border-t pt-4">
+          <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">🎨 Image Generation (Optional)</h3>
+          <div>
+            <label for="imageServiceSelect" class="block text-sm font-medium text-gray-700 mb-1">Image Generation Service</label>
+            <select id="imageServiceSelect" class="w-full p-3 border border-gray-300 rounded-lg">
+              <option value="none">None (Use Placeholders)</option>
+              <option value="openai">OpenAI DALL-E</option>
+              <option value="stabilityai">Stability AI</option>
+            </select>
+          </div>
+          <div id="imageApiFieldsContainer" class="space-y-4" style="display: none;">
+            <div>
+              <label for="imageApiKeyInput" class="block text-sm font-medium text-gray-700 mb-1">Image API Key</label>
+              <input type="password" id="imageApiKeyInput" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Enter your image API key">
+            </div>
+            <div>
+              <label for="imageModelSelect" class="block text-sm font-medium text-gray-700 mb-1">Image Model/Engine</label>
+              <select id="imageModelSelect" class="w-full p-3 border border-gray-300 rounded-lg">
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div id="apiStatusMessage" class="text-sm mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200" style="display: none;"></div>
+
+        <div class="flex gap-3">
+          <button id="saveApiConfigBtn" class="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors">Save & Test</button>
+          <button id="closeApiModalBtn" class="flex-1 bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        // Global App State
+        let app = { 
+            projects: [], 
+            currentProject: null,
+            apiKeys: { 
+                openRouter: '', 
+                textModel: 'google/gemma-2-9b-it:free', 
+                imageService: 'none', 
+                imageApiKey: '', 
+                imageModel: '' 
+            },
+            currentGeneratedStory: null,
+            // Canvas state
+            canvasContext: null,
+            drawingCanvas: null,
+            isDrawing: false,
+            canvasState: { history: [], currentStep: -1, brushColor: '#000000', brushSize: 5, opacity: 100, mode: 'draw' }
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Load projects from localStorage
+            app.projects = JSON.parse(localStorage.getItem('colorBookProjects_vanilla')) || [];
+            
+            // Load API keys from localStorage
+            app.apiKeys.openRouter = localStorage.getItem('colorBook_openRouterKey') || '';
+            app.apiKeys.textModel = localStorage.getItem('colorBook_textModel') || 'google/gemma-2-9b-it:free';
+            app.apiKeys.imageService = localStorage.getItem('colorBook_imageService') || 'none';
+            app.apiKeys.imageApiKey = localStorage.getItem('colorBook_imageApiKey') || '';
+            app.apiKeys.imageModel = localStorage.getItem('colorBook_imageModel') || '';
+
+
+            const navButtons = document.querySelectorAll('aside nav ul li button');
+            const contentSections = document.querySelectorAll('main > div[id^="section-"]');
+            const createNewProjectBtn = document.getElementById('createNewProjectBtn');
+            const projectsGridEl = document.getElementById('projectsGrid');
+            const noProjectsMessageEl = document.getElementById('noProjectsMessage');
+
+            // API Modal Elements
+            const openApiModalBtn = document.getElementById('openApiModalBtn');
+            const apiConfigModal = document.getElementById('apiConfigModal');
+            const closeApiModalBtn = document.getElementById('closeApiModalBtn');
+            const saveApiConfigBtn = document.getElementById('saveApiConfigBtn');
+            const openRouterKeyInput = document.getElementById('openRouterKeyInput');
+            const aiModelSelect = document.getElementById('aiModelSelect');
+            const imageServiceSelect = document.getElementById('imageServiceSelect');
+            const imageApiFieldsContainer = document.getElementById('imageApiFieldsContainer');
+            const imageApiKeyInput = document.getElementById('imageApiKeyInput');
+            const imageModelSelect = document.getElementById('imageModelSelect');
+            const apiStatusMessage = document.getElementById('apiStatusMessage');
+            const apiStatusIndicator = document.getElementById('apiStatusIndicator');
+
+            // AI Story Generator Elements
+            const storyGeneratorForm = document.getElementById('storyGeneratorForm');
+            const generateStoryBtn = document.getElementById('generateStoryBtn');
+            const storyDisplayArea = document.getElementById('storyDisplayArea');
+            const storyGenerationProgress = document.getElementById('storyGenerationProgress');
+            const storyProgressFill = document.getElementById('storyProgressFill');
+            const storyApiStatusIndicator = document.getElementById('storyApiStatusIndicator');
+            const storyLineWeight = document.getElementById('storyLineWeight');
+            const storyLineWeightValue = document.getElementById('storyLineWeightValue');
+            const storyActionButtons = document.getElementById('storyActionButtons');
+            const saveStoryToProjectBtn = document.getElementById('saveStoryToProjectBtn');
+
+            // Drawing Canvas Elements
+            const drawingCanvasEl = document.getElementById('drawingCanvas');
+            const drawModeBtn = document.getElementById('drawModeBtn');
+            const eraseModeBtn = document.getElementById('eraseModeBtn');
+            const colorPaletteContainer = document.getElementById('colorPaletteContainer');
+            const customColorInput = document.getElementById('customColorInput');
+            const brushSizeSlider = document.getElementById('brushSizeSlider');
+            const brushSizeValue = document.getElementById('brushSizeValue');
+            const opacitySlider = document.getElementById('opacitySlider');
+            const opacityValue = document.getElementById('opacityValue');
+            const templateContainer = document.getElementById('templateContainer');
+            const undoCanvasBtn = document.getElementById('undoCanvasBtn');
+            const redoCanvasBtn = document.getElementById('redoCanvasBtn');
+            const clearCanvasBtn = document.getElementById('clearCanvasBtn');
+            const saveCanvasBtn = document.getElementById('saveCanvasBtn');
+
+
+            const sectionMap = {
+                'nav-dashboard': 'section-dashboard',
+                'nav-projects': 'section-projects',
+                'nav-ai-story-generator': 'section-ai-story-generator',
+                'nav-ai-images': 'section-ai-images',
+                'nav-photo-converter': 'section-photo-converter',
+                'nav-drawing-canvas': 'section-drawing-canvas',
+                'nav-layout-designer': 'section-layout-designer',
+                'nav-kdp-compliance': 'section-kdp-compliance',
+                'nav-pdf-export': 'section-pdf-export'
+            };
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    contentSections.forEach(section => section.classList.add('hidden'));
+                    navButtons.forEach(btn => btn.classList.remove('active-nav'));
+                    
+                    const targetSectionId = sectionMap[button.id];
+                    if (targetSectionId) {
+                        const targetSection = document.getElementById(targetSectionId);
+                        if (targetSection) targetSection.classList.remove('hidden');
+                        
+                        if (targetSectionId === 'section-ai-story-generator') {
+                            updateStoryApiStatusIndicator();
+                        }
+                        if (targetSectionId === 'section-drawing-canvas') {
+                            if (!app.canvasContext) { // Initialize canvas only once
+                                initializeDrawingCanvas();
+                            }
+                        }
+                    }
+                    button.classList.add('active-nav');
+                });
+            });
+
+            // --- Project Management Functions ---
+            function generateId() {
+              return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            }
+
+            function saveProjects() {
+              localStorage.setItem('colorBookProjects_vanilla', JSON.stringify(app.projects));
+            }
+            
+            function showUINotification(message, type = 'info', duration = 3000) {
+                const notificationElement = document.getElementById('uiNotification');
+                if (!notificationElement) return;
+                notificationElement.textContent = message;
+                notificationElement.className = 'notification show'; // Reset classes
+                if (type === 'success') {
+                    notificationElement.classList.add('success');
+                } else if (type === 'error') {
+                    notificationElement.classList.add('error');
+                }
+                setTimeout(() => {
+                    notificationElement.className = 'notification'; // Hide
+                }, duration);
+            }
+
+            function renderProjects() {
+                if (!projectsGridEl || !noProjectsMessageEl) return;
+                projectsGridEl.innerHTML = ''; 
+                if (app.projects.length === 0) {
+                    noProjectsMessageEl.style.display = 'block';
+                } else {
+                    noProjectsMessageEl.style.display = 'none';
+                    app.projects.forEach(project => {
+                        const projectCard = `
+                            <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                              <div class="p-6">
+                                <h3 class="text-xl font-semibold mb-2 truncate" title="${project.title}">${project.title}</h3>
+                                <p class="text-gray-600 mb-2 text-sm h-10 overflow-hidden">${project.description || 'No description'}</p>
+                                <p class="text-xs text-gray-500 mb-4">${project.pages?.length || 0} pages • Created: ${new Date(project.createdAt).toLocaleDateString()}</p>
+                                <div class="flex gap-2 mt-4">
+                                  <button data-project-id="${project.id}" class="openProjectBtn flex-1 bg-blue-500 text-white py-2 px-3 rounded hover:bg-blue-600 transition-colors text-sm">Open</button>
+                                  <button data-project-id="${project.id}" class="duplicateProjectBtn px-3 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors text-sm" title="Duplicate">📋</button>
+                                  <button data-project-id="${project.id}" class="deleteProjectBtn px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-sm" title="Delete">🗑️</button>
+                                </div>
+                              </div>
+                            </div>
+                        `;
+                        projectsGridEl.insertAdjacentHTML('beforeend', projectCard);
+                    });
+                }
+                addProjectButtonListeners();
+            }
+
+            function addProjectButtonListeners() {
+                document.querySelectorAll('.openProjectBtn').forEach(btn => btn.addEventListener('click', (e) => openProject(e.target.dataset.projectId)));
+                document.querySelectorAll('.duplicateProjectBtn').forEach(btn => btn.addEventListener('click', (e) => duplicateProject(e.target.dataset.projectId)));
+                document.querySelectorAll('.deleteProjectBtn').forEach(btn => btn.addEventListener('click', (e) => deleteProject(e.target.dataset.projectId)));
+            }
+
+            function createNewProject() {
+                const projectTitle = prompt("Enter project title:");
+                if (!projectTitle) return;
+                const projectDescription = prompt("Enter project description (optional):");
+                const newProject = { id: generateId(), title: projectTitle, description: projectDescription || '', createdAt: new Date().toISOString(), pages: [], metadata: {} };
+                app.projects.unshift(newProject);
+                saveProjects();
+                renderProjects();
+                showUINotification(`Project "${projectTitle}" created!`, 'success');
+            }
+            if (createNewProjectBtn) createNewProjectBtn.addEventListener('click', createNewProject);
+
+            function openProject(projectId) {
+                const project = app.projects.find(p => p.id === projectId);
+                if (project) {
+                    app.currentProject = project;
+                    showUINotification(`Project "${project.title}" opened.`);
+                    console.log("Current project set to:", app.currentProject);
+                }
+            }
+
+            function duplicateProject(projectId) {
+                const originalProject = app.projects.find(p => p.id === projectId);
+                if (!originalProject) return;
+                const newProject = JSON.parse(JSON.stringify(originalProject));
+                newProject.id = generateId();
+                newProject.title = `${originalProject.title} (Copy)`;
+                newProject.createdAt = new Date().toISOString();
+                const originalIndex = app.projects.findIndex(p => p.id === projectId);
+                app.projects.splice(originalIndex + 1, 0, newProject);
+                saveProjects();
+                renderProjects();
+                showUINotification(`Project "${originalProject.title}" duplicated.`, 'success');
+            }
+
+            function deleteProject(projectId) {
+                const projectToDelete = app.projects.find(p => p.id === projectId);
+                if (!projectToDelete) return;
+                if (confirm(`Are you sure you want to delete project "${projectToDelete.title}"?`)) {
+                    app.projects = app.projects.filter(p => p.id !== projectId);
+                    if (app.currentProject && app.currentProject.id === projectId) app.currentProject = null;
+                    saveProjects();
+                    renderProjects();
+                    showUINotification(`Project "${projectToDelete.title}" deleted.`, 'success');
+                }
+            }
+            renderProjects();
+
+            // --- API Configuration Functions ---
+            function updateApiStatusIndicator() {
+                if (app.apiKeys.openRouter) {
+                    apiStatusIndicator.textContent = '✔️ Configured';
+                    apiStatusIndicator.className = 'ml-auto text-xs text-green-600';
+                } else {
+                    apiStatusIndicator.textContent = '⚠️ Not Set';
+                    apiStatusIndicator.className = 'ml-auto text-xs text-amber-600';
+                }
+            }
+
+            function openApiModal() {
+                openRouterKeyInput.value = app.apiKeys.openRouter;
+                aiModelSelect.value = app.apiKeys.textModel;
+                imageServiceSelect.value = app.apiKeys.imageService;
+                imageApiKeyInput.value = app.apiKeys.imageApiKey;
+                toggleImageApiFieldsVisibility(); 
+                apiConfigModal.classList.remove('hidden');
+                apiStatusMessage.style.display = 'none';
+            }
+
+            function closeApiModal() {
+                apiConfigModal.classList.add('hidden');
+                apiStatusMessage.textContent = '';
+                apiStatusMessage.style.display = 'none';
+            }
+
+            function saveApiConfig() {
+                app.apiKeys.openRouter = openRouterKeyInput.value.trim();
+                app.apiKeys.textModel = aiModelSelect.value;
+                app.apiKeys.imageService = imageServiceSelect.value;
+                app.apiKeys.imageApiKey = imageApiKeyInput.value.trim();
+                app.apiKeys.imageModel = imageModelSelect.value;
+
+                localStorage.setItem('colorBook_openRouterKey', app.apiKeys.openRouter);
+                localStorage.setItem('colorBook_textModel', app.apiKeys.textModel);
+                localStorage.setItem('colorBook_imageService', app.apiKeys.imageService);
+                localStorage.setItem('colorBook_imageApiKey', app.apiKeys.imageApiKey);
+                localStorage.setItem('colorBook_imageModel', app.apiKeys.imageModel);
+
+                apiStatusMessage.textContent = 'Configuration saved! ';
+                apiStatusMessage.classList.remove('bg-red-100', 'text-red-700', 'border-red-300', 'bg-yellow-100', 'text-yellow-700', 'border-yellow-300');
+                apiStatusMessage.classList.add('bg-green-100', 'text-green-700', 'border-green-300');
+                apiStatusMessage.style.display = 'block';
+
+                if (app.apiKeys.openRouter) { 
+                     apiStatusMessage.textContent += 'OpenRouter key looks OK.';
+                } else {
+                    apiStatusMessage.textContent = 'OpenRouter key is missing.'; 
+                    apiStatusMessage.classList.remove('bg-green-100', 'text-green-700', 'border-green-300');
+                    apiStatusMessage.classList.add('bg-yellow-100', 'text-yellow-700', 'border-yellow-300');
+                }
+                
+                updateApiStatusIndicator();
+                updateStoryApiStatusIndicator(); 
+                showUINotification('API Configuration saved!', 'success');
+            }
+
+            function toggleImageApiFieldsVisibility() {
+                const selectedService = imageServiceSelect.value;
+                imageModelSelect.innerHTML = ''; 
+
+                if (selectedService === 'none') {
+                    imageApiFieldsContainer.style.display = 'none';
+                    app.apiKeys.imageModel = ''; 
+                } else {
+                    imageApiFieldsContainer.style.display = 'block';
+                    if (selectedService === 'openai') {
+                        imageModelSelect.innerHTML = `
+                            <option value="dall-e-3">DALL-E 3</option>
+                            <option value="dall-e-2">DALL-E 2</option>
+                        `;
+                    } else if (selectedService === 'stabilityai') {
+                        imageModelSelect.innerHTML = `
+                            <option value="stable-diffusion-xl-1024-v1-0">Stable Diffusion XL 1.0</option>
+                            <option value="stable-diffusion-v1-6">Stable Diffusion 1.6</option>
+                        `;
+                    }
+                    imageModelSelect.value = app.apiKeys.imageModel || imageModelSelect.options[0]?.value || '';
+                }
+            }
+
+            if(openApiModalBtn) openApiModalBtn.addEventListener('click', openApiModal);
+            if(closeApiModalBtn) closeApiModalBtn.addEventListener('click', closeApiModal);
+            if(saveApiConfigBtn) saveApiConfigBtn.addEventListener('click', saveApiConfig);
+            if(imageServiceSelect) imageServiceSelect.addEventListener('change', toggleImageApiFieldsVisibility);
+            
+            toggleImageApiFieldsVisibility(); 
+            updateApiStatusIndicator(); 
+
+            // --- AI Story Generator Functions ---
+            if(storyLineWeight && storyLineWeightValue) {
+                storyLineWeight.addEventListener('input', () => { storyLineWeightValue.textContent = storyLineWeight.value; });
+            }
+
+            function updateStoryApiStatusIndicator() {
+                if (!storyApiStatusIndicator) return;
+                if (app.apiKeys.openRouter && app.apiKeys.textModel) {
+                    storyApiStatusIndicator.innerHTML = `✔️ Ready <span class="text-xs text-gray-500">(Model: ${app.apiKeys.textModel.split('/').pop()})</span>`;
+                    storyApiStatusIndicator.className = 'text-sm p-2 rounded-lg bg-green-50 text-green-700';
+                } else {
+                    storyApiStatusIndicator.innerHTML = '⚠️ API Key or Model Not Set';
+                    storyApiStatusIndicator.className = 'text-sm p-2 rounded-lg bg-amber-50 text-amber-700';
+                }
+            }
+
+            async function handleStoryGeneration(event) {
+                event.preventDefault();
+                if (!app.apiKeys.openRouter) {
+                    showUINotification('OpenRouter API Key is not set. Please configure AI first.', 'error');
+                    return;
+                }
+
+                generateStoryBtn.disabled = true;
+                generateStoryBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                storyGenerationProgress.style.display = 'block';
+                storyProgressFill.style.width = '0%';
+                storyDisplayArea.innerHTML = '<div class="text-center text-gray-500 flex items-center justify-center h-full">Generating story...</div>';
+                storyActionButtons.style.display = 'none';
+                app.currentGeneratedStory = null;
+
+                const theme = document.getElementById('storyTheme').value;
+                const characters = document.getElementById('storyCharacters').value;
+                const ageMin = document.getElementById('storyAgeMin').value;
+                const ageMax = document.getElementById('storyAgeMax').value;
+                const isAdult = document.getElementById('storyAdultAudience').checked;
+                const numPages = parseInt(document.getElementById('storyNumPages').value);
+                const wordsPerPage = parseInt(document.getElementById('storyWordsPerPage').value);
+                const imageStyle = document.getElementById('storyImageStyle').value;
+                const lineWeight = document.getElementById('storyLineWeight').value;
+                const aspectRatio = document.getElementById('storyAspectRatio').value;
+                const moral = document.getElementById('storyMoral').value;
+
+                let ageGroup = isAdult ? "adults" : `children aged ${ageMin}-${ageMax}`;
+
+                const prompt = `
+                    Generate a story for ${ageGroup} with exactly ${numPages} pages.
+                    Each page should have approximately ${wordsPerPage} words of story text.
+                    The theme is: "${theme}".
+                    Main characters: "${characters}".
+                    ${moral ? `The story should subtly convey the moral: "${moral}".` : ""}
+
+                    For EACH page, provide:
+                    1. The page number (e.g., PAGE 1:).
+                    2. The story text for that page (STORY: ...).
+                    3. A detailed image prompt for that page (IMAGE_PROMPT: ...).
+
+                    The image prompt must include:
+                    - Visual details based on the story text for that specific page.
+                    - Style: "${imageStyle}".
+                    - Specify "coloring book black and white outlines no shading".
+                    - Line weight: ${lineWeight} (on a scale of 1-10, where 1 is thin and 10 is thick).
+                    - Aspect ratio: "${aspectRatio}".
+                    - The image should depict the characters and actions from the story text for that page.
+
+                    Example for one page:
+                    PAGE 1:
+                    STORY: Once upon a time, Luna the brave rabbit found a shiny key in the magical forest.
+                    IMAGE_PROMPT: Luna the rabbit, looking curious, holds a glowing key. Magical forest background with tall, whimsical trees and sparkling flowers. Style: ${imageStyle}, coloring book black and white outlines no shading, line weight ${lineWeight}, aspect ratio ${aspectRatio}.
+
+                    Ensure the output strictly follows this structure for all ${numPages} pages.
+                `;
+                
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 5;
+                    if (progress <= 90) storyProgressFill.style.width = `${progress}%`;
+                }, 200);
+
+                try {
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${app.apiKeys.openRouter}`,
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': window.location.href, 
+                            'X-Title': 'ColorBook Engine' 
+                        },
+                        body: JSON.stringify({
+                            model: app.apiKeys.textModel,
+                            messages: [
+                                { role: 'system', content: "You are a creative assistant that generates children's stories formatted for coloring books, with separate story text and detailed image prompts for each page. Follow the user's formatting instructions precisely for STORY: and IMAGE_PROMPT: sections for each page." },
+                                { role: 'user', content: prompt }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: numPages * wordsPerPage * 3 + 500 
+                        })
+                    });
+
+                    clearInterval(progressInterval);
+                    storyProgressFill.style.width = '100%';
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+                            const aiResponseText = data.choices[0].message.content;
+                            app.currentGeneratedStory = parseGeneratedStory(aiResponseText);
+                            displayGeneratedStory(app.currentGeneratedStory);
+                            if (app.currentGeneratedStory && app.currentGeneratedStory.length > 0) {
+                                storyActionButtons.style.display = 'flex';
+                                showUINotification('Story generated successfully!', 'success');
+                            } else {
+                                storyDisplayArea.innerHTML = '<div class="text-center text-gray-500 flex items-center justify-center h-full">Could not parse the story. AI response might be malformed.</div>';
+                                showUINotification('Story generation complete, but parsing failed.', 'error');
+                            }
+                        } else {
+                            throw new Error('Invalid response structure from API.');
+                        }
+                    } else {
+                        const errorData = await response.text();
+                        throw new Error(`API Error (${response.status}): ${errorData}`);
+                    }
+                } catch (error) {
+                    console.error('Error generating story:', error);
+                    storyDisplayArea.innerHTML = `<div class="text-center text-red-500 p-4">Error generating story: ${error.message}</div>`;
+                    showUINotification(`Error: ${error.message}`, 'error');
+                } finally {
+                    generateStoryBtn.disabled = false;
+                    generateStoryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    storyGenerationProgress.style.display = 'none';
+                }
+            }
+
+            function parseGeneratedStory(responseText) {
+                const pages = [];
+                const pageBlocks = responseText.split(/PAGE\s*\d+\s*:/i).slice(1);
+
+                pageBlocks.forEach((block, index) => {
+                    const storyMatch = block.match(/STORY\s*:\s*([\s\S]*?)IMAGE_PROMPT\s*:/i);
+                    const imagePromptMatch = block.match(/IMAGE_PROMPT\s*:\s*([\s\S]*)/i);
+
+                    if (storyMatch && imagePromptMatch) {
+                        pages.push({
+                            pageNumber: index + 1,
+                            story: storyMatch[1].trim(),
+                            imagePrompt: imagePromptMatch[1].trim()
+                        });
+                    } else {
+                        console.warn(`Could not parse page block ${index + 1} fully. Content:\n${block}`);
+                        const storyOnlyMatch = block.match(/STORY\s*:\s*([\s\S]*)/i);
+                        if (storyOnlyMatch) {
+                             pages.push({
+                                pageNumber: index + 1,
+                                story: storyOnlyMatch[1].trim(),
+                                imagePrompt: "Error: Could not parse image prompt for this page."
+                            });
+                        }
+                    }
+                });
+                return pages;
+            }
+
+            function displayGeneratedStory(storyPages) {
+                storyDisplayArea.innerHTML = '';
+                if (!storyPages || storyPages.length === 0) {
+                    storyDisplayArea.innerHTML = '<div class="text-center text-gray-500 flex items-center justify-center h-full">No story generated or failed to parse.</div>';
+                    storyActionButtons.style.display = 'none';
+                    return;
+                }
+
+                storyPages.forEach(page => {
+                    const cardHtml = `
+                        <div class="story-card bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow">
+                        <h4 class="font-semibold text-gray-700 mb-1">Page ${page.pageNumber}</h4>
+                        <p class="text-sm text-gray-600 whitespace-pre-wrap mb-2">${page.story}</p>
+                        <details class="text-xs">
+                            <summary class="cursor-pointer text-blue-600 hover:underline">View Image Prompt</summary>
+                            <p class="mt-1 text-gray-500 bg-gray-100 p-2 rounded font-mono text-xs whitespace-pre-wrap">${page.imagePrompt}</p>
+                        </details>
+                        </div>
+                    `;
+                    storyDisplayArea.insertAdjacentHTML('beforeend', cardHtml);
+                });
+                storyActionButtons.style.display = 'flex';
+            }
+            
+            function saveStoryToCurrentProject() {
+                if (!app.currentProject) {
+                    showUINotification('No active project selected. Please open or create a project first.', 'error');
+                    return;
+                }
+                if (!app.currentGeneratedStory || app.currentGeneratedStory.length === 0) {
+                    showUINotification('No story has been generated yet.', 'error');
+                    return;
+                }
+                app.currentProject.pages = app.currentGeneratedStory.map(p => ({
+                    id: generateId(), 
+                    type: 'story_page', 
+                    pageNumber: p.pageNumber,
+                    storyText: p.story,
+                    imagePrompt: p.imagePrompt,
+                }));
+                app.currentProject.storyMetadata = {
+                    theme: document.getElementById('storyTheme').value,
+                    characters: document.getElementById('storyCharacters').value,
+                    generatedAt: new Date().toISOString()
+                };
+                saveProjects();
+                showUINotification(`Story saved to project "${app.currentProject.title}"!`, 'success');
+                renderProjects(); 
+            }
+
+            if(storyGeneratorForm) storyGeneratorForm.addEventListener('submit', handleStoryGeneration);
+            if(saveStoryToProjectBtn) saveStoryToProjectBtn.addEventListener('click', saveStoryToCurrentProject);
+            updateStoryApiStatusIndicator();
+
+            // --- Drawing Canvas Functions ---
+            function initializeDrawingCanvas() {
+                if (!drawingCanvasEl) {
+                    console.error("Drawing canvas element not found!");
+                    return;
+                }
+                app.drawingCanvas = drawingCanvasEl;
+                app.canvasContext = app.drawingCanvas.getContext('2d');
+                
+                app.canvasContext.lineCap = 'round';
+                app.canvasContext.lineJoin = 'round';
+
+                // Fill canvas with white background initially
+                app.canvasContext.fillStyle = '#FFFFFF';
+                app.canvasContext.fillRect(0, 0, app.drawingCanvas.width, app.drawingCanvas.height);
+                
+                saveCanvasHistory();
+
+                app.drawingCanvas.addEventListener('mousedown', startDraw);
+                app.drawingCanvas.addEventListener('mousemove', draw);
+                app.drawingCanvas.addEventListener('mouseup', stopDraw);
+                app.drawingCanvas.addEventListener('mouseout', stopDraw);
+
+                populateColorPalette();
+                populateTemplatePreviews();
+
+                drawModeBtn.addEventListener('click', () => setDrawMode('draw'));
+                eraseModeBtn.addEventListener('click', () => setDrawMode('erase'));
+                brushSizeSlider.addEventListener('input', (e) => {
+                    app.canvasState.brushSize = e.target.value;
+                    brushSizeValue.textContent = e.target.value;
+                });
+                opacitySlider.addEventListener('input', (e) => {
+                    app.canvasState.opacity = e.target.value;
+                    opacityValue.textContent = e.target.value;
+                });
+                customColorInput.addEventListener('input', (e) => changeBrushColor(e.target.value));
+                undoCanvasBtn.addEventListener('click', undoCanvas);
+                redoCanvasBtn.addEventListener('click', redoCanvas);
+                clearCanvasBtn.addEventListener('click', clearCanvas);
+                saveCanvasBtn.addEventListener('click', saveCanvasImage);
+            }
+
+            function startDraw(e) {
+                app.isDrawing = true;
+                const rect = app.drawingCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                app.canvasContext.beginPath();
+                app.canvasContext.moveTo(x, y);
+            }
+
+            function draw(e) {
+                if (!app.isDrawing) return;
+                const rect = app.drawingCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                app.canvasContext.globalCompositeOperation = app.canvasState.mode === 'draw' ? 'source-over' : 'destination-out';
+                app.canvasContext.strokeStyle = app.canvasState.brushColor; // Color is relevant for draw mode
+                app.canvasContext.lineWidth = app.canvasState.brushSize;
+                app.canvasContext.globalAlpha = app.canvasState.opacity / 100;
+                
+                app.canvasContext.lineTo(x, y);
+                app.canvasContext.stroke();
+                
+                // For smoother drawing, begin a new path for the next segment
+                app.canvasContext.beginPath();
+                app.canvasContext.moveTo(x, y);
+            }
+
+            function stopDraw() {
+                if (app.isDrawing) {
+                    app.isDrawing = false;
+                    app.canvasContext.beginPath(); // Reset current path
+                    saveCanvasHistory();
+                    app.canvasContext.globalAlpha = 1; // Reset alpha
+                }
+            }
+
+            function saveCanvasHistory() {
+                app.canvasState.currentStep++;
+                if (app.canvasState.currentStep < app.canvasState.history.length) {
+                    app.canvasState.history.length = app.canvasState.currentStep;
+                }
+                app.canvasState.history.push(app.drawingCanvas.toDataURL());
+            }
+
+            function restoreCanvasFromHistory() {
+                if (app.canvasState.currentStep < 0 || app.canvasState.currentStep >= app.canvasState.history.length) return;
+                
+                const img = new Image();
+                img.onload = () => {
+                    app.canvasContext.clearRect(0, 0, app.drawingCanvas.width, app.drawingCanvas.height);
+                    app.canvasContext.drawImage(img, 0, 0);
+                };
+                img.src = app.canvasState.history[app.canvasState.currentStep];
+            }
+
+            function undoCanvas() {
+                if (app.canvasState.currentStep > 0) {
+                    app.canvasState.currentStep--;
+                    restoreCanvasFromHistory();
+                }
+            }
+
+            function redoCanvas() {
+                if (app.canvasState.currentStep < app.canvasState.history.length - 1) {
+                    app.canvasState.currentStep++;
+                    restoreCanvasFromHistory();
+                }
+            }
+
+            function clearCanvas() {
+                if (confirm('Are you sure you want to clear the canvas? This cannot be undone.')) {
+                    app.canvasContext.fillStyle = '#FFFFFF';
+                    app.canvasContext.clearRect(0, 0, app.drawingCanvas.width, app.drawingCanvas.height);
+                    app.canvasContext.fillRect(0, 0, app.drawingCanvas.width, app.drawingCanvas.height);
+                    saveCanvasHistory();
+                }
+            }
+
+            function saveCanvasImage() {
+                const link = document.createElement('a');
+                link.download = 'drawing.png';
+                link.href = app.drawingCanvas.toDataURL('image/png');
+                link.click();
+                showUINotification('Image saved as drawing.png', 'success');
+            }
+
+            function changeBrushColor(color) {
+                app.canvasState.brushColor = color;
+                customColorInput.value = color;
+                // Update active swatch
+                document.querySelectorAll('#colorPaletteContainer .color-swatch').forEach(sw => sw.classList.remove('active-tool'));
+                const selectedSwatch = document.querySelector(`#colorPaletteContainer .color-swatch[data-color="${color}"]`);
+                if (selectedSwatch) selectedSwatch.classList.add('active-tool');
+            }
+
+            function setDrawMode(mode) {
+                app.canvasState.mode = mode;
+                if (mode === 'draw') {
+                    drawModeBtn.classList.add('active-tool', 'bg-blue-100', 'text-blue-700');
+                    eraseModeBtn.classList.remove('active-tool', 'bg-blue-100', 'text-blue-700');
+                    eraseModeBtn.classList.add('hover:bg-gray-100');
+                } else {
+                    eraseModeBtn.classList.add('active-tool', 'bg-blue-100', 'text-blue-700');
+                    drawModeBtn.classList.remove('active-tool', 'bg-blue-100', 'text-blue-700');
+                    drawModeBtn.classList.add('hover:bg-gray-100');
+                }
+            }
+
+            function populateColorPalette() {
+                const defaultColors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#A52A2A', '#FFFFFF', '#808080'];
+                defaultColors.forEach(color => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'color-swatch';
+                    swatch.style.backgroundColor = color;
+                    swatch.dataset.color = color;
+                    if (color === app.canvasState.brushColor) swatch.classList.add('active-tool');
+                    swatch.addEventListener('click', () => changeBrushColor(color));
+                    colorPaletteContainer.appendChild(swatch);
+                });
+            }
+
+            function populateTemplatePreviews() {
+                const templates = [
+                    { name: 'Circle', drawFunc: (ctx, w, h) => { ctx.beginPath(); ctx.arc(w/2, h/2, Math.min(w,h)/3, 0, 2 * Math.PI); ctx.stroke(); } },
+                    { name: 'Square', drawFunc: (ctx, w, h) => { const size = Math.min(w,h)/1.5; ctx.strokeRect((w-size)/2, (h-size)/2, size, size); } },
+                    { name: 'Lines', drawFunc: (ctx, w, h) => { for(let i=0; i<10; i++) { ctx.beginPath(); ctx.moveTo(w*0.1, h*0.1 + i*h*0.08); ctx.lineTo(w*0.9, h*0.1 + i*h*0.08); ctx.stroke();}} }
+                ];
+                templates.forEach(template => {
+                    const preview = document.createElement('div');
+                    preview.className = 'template-preview';
+                    preview.textContent = template.name;
+                    preview.addEventListener('click', () => loadCanvasTemplate(template.drawFunc));
+                    templateContainer.appendChild(preview);
+                });
+            }
+
+            function loadCanvasTemplate(drawFunction) {
+                if (confirm('Loading a template will clear the current drawing. Continue?')) {
+                    app.canvasContext.fillStyle = '#FFFFFF';
+                    app.canvasContext.clearRect(0, 0, app.drawingCanvas.width, app.drawingCanvas.height);
+                    app.canvasContext.fillRect(0, 0, app.drawingCanvas.width, app.drawingCanvas.height);
+                    
+                    // Set default drawing style for template
+                    app.canvasContext.strokeStyle = app.canvasState.brushColor; // Use current color
+                    app.canvasContext.lineWidth = 2; // Fixed line weight for templates for consistency
+                    app.canvasContext.globalAlpha = 1;
+                    app.canvasContext.globalCompositeOperation = 'source-over';
+
+                    drawFunction(app.canvasContext, app.drawingCanvas.width, app.drawingCanvas.height);
+                    saveCanvasHistory();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
