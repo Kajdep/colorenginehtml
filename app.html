@@ -56,13 +56,31 @@
         }
         .draggable-element {
             @apply absolute border border-dashed border-gray-500 p-1 cursor-grab select-none;
+            /* position: relative; Ensure this is set for absolute positioning of handles */
         }
         .draggable-element img, .draggable-element svg {
             @apply w-full h-full object-contain pointer-events-none; /* Ensure image/svg scales and doesn't interfere with drag */
         }
         .draggable-element-text {
-            @apply text-xs overflow-hidden whitespace-pre-wrap; /* Basic text styling */
+            @apply text-xs overflow-hidden whitespace-pre-wrap w-full h-full; /* Basic text styling, ensure it fills */
         }
+        .selected-layout-element {
+           outline: 2px dashed #3b82f6; /* Tailwind: border-2 border-dashed border-blue-600 */
+           /* position: relative; // Already should be for resize handles */
+        }
+        .resize-handle {
+           position: absolute;
+           width: 10px;
+           height: 10px;
+           background-color: #3b82f6; /* Tailwind: bg-blue-600 */
+           border: 1px solid white; /* Tailwind: border border-white */
+           border-radius: 2px; /* Tailwind: rounded-sm */
+           z-index: 10; /* Ensure handles are on top */
+        }
+        .resize-handle.bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
+        .resize-handle.bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
+        .resize-handle.top-right { top: -5px; right: -5px; cursor: nesw-resize; }
+        .resize-handle.top-left { top: -5px; left: -5px; cursor: nwse-resize; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -96,39 +114,14 @@
 
         <!-- Main Content Area -->
         <main class="flex-1 p-6 overflow-auto">
-            <div id="section-dashboard">
-                <!-- ... dashboard content ... -->
-            </div>
-            
-            <div id="section-projects" class="hidden">
-                <!-- ... projects content ... -->
-            </div>
-
-            <div id="section-ai-story-generator" class="hidden">
-                 <!-- ... story generator content ... -->
-            </div>
-
-            <div id="section-ai-images" class="hidden">
-                <!-- ... AI images content ... -->
-            </div>
-
-            <div id="section-photo-converter" class="hidden">
-                <h1 class="text-2xl font-semibold text-gray-800">Photo Converter Content</h1>
-                <p class="mt-2 text-gray-600">Convert photos into various styles like coloring book pages.</p>
-            </div>
-            
-            <div id="section-drawing-canvas" class="hidden">
-                <!-- ... drawing canvas content ... -->
-            </div>
-
-            <div id="section-layout-designer" class="hidden">
-                <!-- ... layout designer content ... -->
-            </div>
-
-            <div id="section-kdp-compliance" class="hidden">
-                <h1 class="text-2xl font-semibold text-gray-800">KDP Compliance Content</h1>
-                <p class="mt-2 text-gray-600">Tools and checkers for KDP compliance.</p>
-            </div>
+            <div id="section-dashboard"> <!-- Dashboard content --> </div>
+            <div id="section-projects" class="hidden"> <!-- Projects content --> </div>
+            <div id="section-ai-story-generator" class="hidden"> <!-- Story Generator content --> </div>
+            <div id="section-ai-images" class="hidden"> <!-- AI Images content --> </div>
+            <div id="section-photo-converter" class="hidden"> <!-- Photo Converter content --> </div>
+            <div id="section-drawing-canvas" class="hidden"> <!-- Drawing Canvas content --> </div>
+            <div id="section-layout-designer" class="hidden"> <!-- Layout Designer content --> </div>
+            <div id="section-kdp-compliance" class="hidden"> <!-- KDP Compliance content --> </div>
             
             <div id="section-pdf-export" class="hidden">
                 <div class="max-w-3xl mx-auto">
@@ -141,7 +134,7 @@
                         </div>
             
                         <div>
-                            <label for="pdfQualitySetting" class="block text-sm font-medium text-gray-700">Quality (DPI for Images)</label>
+                            <label for="pdfQualitySetting" class="block text-sm font-medium text-gray-700">Quality (DPI for Raster Images)</label>
                             <select id="pdfQualitySetting" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                                 <option value="96">Draft (96 DPI)</option>
                                 <option value="150" selected>Standard (150 DPI)</option>
@@ -170,7 +163,7 @@
     <div id="uiNotification" class="notification"></div>
 
     <div id="apiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-      <!-- ... API Config Modal content ... -->
+      <!-- ... API Config Modal content (assumed complete) ... -->
     </div>
 
     <script>
@@ -190,7 +183,13 @@
             selectedLayoutPageNumber: null,
             draggingElement: null, 
             dragOffsetX: 0, 
-            dragOffsetY: 0
+            dragOffsetY: 0,
+            originalImage: null,
+            convertedImageDataUrl: null,
+            selectedLayoutElementId: null,
+            isResizing: false,
+            resizeHandleDirection: null,
+            originalElementRect: null
         };
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -205,11 +204,7 @@
             // DOM Selectors (condensed, assuming they are correctly defined as in previous steps)
             const navButtons = document.querySelectorAll('aside nav ul li button');
             const contentSections = document.querySelectorAll('main > div[id^="section-"]');
-            const createNewProjectBtn = document.getElementById('createNewProjectBtn');
-            const projectsGridEl = document.getElementById('projectsGrid');
-            const noProjectsMessageEl = document.getElementById('noProjectsMessage');
-            // ... other existing selectors for Story Gen, Image Gen, Canvas, Layout Designer ...
-
+            
             // PDF Export Selectors
             const pdfProjectNameEl = document.getElementById('pdfProjectName');
             const generatePdfBtn = document.getElementById('generatePdfBtn');
@@ -241,11 +236,11 @@
                 if (targetSection) targetSection.classList.remove('hidden');
                 if (targetNavButton) targetNavButton.classList.add('active-nav');
 
-                // Section-specific initializers/updaters
+                // Section-specific initializers/updaters (Ensure all relevant initializers are called)
                 if (fullSectionId === 'section-ai-story-generator' && document.getElementById('storyApiStatusIndicator')) updateStoryApiStatusIndicator();
-                if (fullSectionId === 'section-drawing-canvas' && !app.canvasContext) initializeDrawingCanvas();
+                if (fullSectionId === 'section-drawing-canvas' && !app.canvasContext && document.getElementById('drawingCanvas')) initializeDrawingCanvas();
                 if (fullSectionId === 'section-ai-images' && document.getElementById('imageApiStatusIndicator_img')) updateImageApiStatusIndicator();
-                if (fullSectionId === 'section-layout-designer') {
+                if (fullSectionId === 'section-layout-designer' && document.getElementById('layoutDesignerContent')) {
                     if (!app.currentProject) {
                         if(document.getElementById('layoutDesignerMessage')) document.getElementById('layoutDesignerMessage').style.display = 'block';
                         if(document.getElementById('layoutDesignerContent')) document.getElementById('layoutDesignerContent').style.display = 'none';
@@ -255,9 +250,9 @@
                         initializeLayoutDesigner();
                     }
                 }
-                if (fullSectionId === 'section-pdf-export') {
-                    initializePdfExportSection();
-                }
+                if (fullSectionId === 'section-pdf-export' && document.getElementById('generatePdfBtn')) initializePdfExportSection();
+                if (fullSectionId === 'section-photo-converter' && document.getElementById('photoUploadDropZone')) initializePhotoConverter();
+                if (fullSectionId === 'section-kdp-compliance' && document.getElementById('runKdpChecksBtn')) initializeKdpCheckerSection();
             }
 
             navButtons.forEach(button => {
@@ -274,9 +269,8 @@
             function escapeHTML(str) { /* ... */ }
 
             // Project Management (condensed - assumed complete)
-            if (projectsGridEl) { /* ... All project functions ... */ }
-            if (createNewProjectBtn) createNewProjectBtn.addEventListener('click', createNewProject);
-
+            if (document.getElementById('projectsGrid')) { /* ... All project functions ... */ }
+            if (document.getElementById('createNewProjectBtn')) document.getElementById('createNewProjectBtn').addEventListener('click', createNewProject);
 
             // API Config Modal (condensed - assumed complete)
             if (document.getElementById('openApiModalBtn')) { /* ... All API modal functions ... */ }
@@ -291,7 +285,41 @@
             if (document.getElementById('imageGenerationForm')) { /* ... All Image Gen functions ... */ }
 
             // Layout Designer (condensed - assumed complete)
-            if (document.getElementById('layoutDesignerContent')) { /* ... All Layout Designer functions ... */ }
+            if (document.getElementById('layoutDesignerContent')) { /* ... All Layout Designer functions, including addElementToWorkspace for fontSize ... */ 
+                function addElementToWorkspace(type, pageData) {
+                    if (!app.currentProject || app.selectedLayoutPageNumber === null) return;
+                    const pageIndex = app.currentProject.pages.findIndex(p => p.pageNumber === app.selectedLayoutPageNumber);
+                    if (pageIndex === -1) return;
+
+                    if (!app.currentProject.pages[pageIndex].layout) {
+                        app.currentProject.pages[pageIndex].layout = { elements: [] };
+                    }
+
+                    const newElement = {
+                        id: generateId(),
+                        type: type,
+                        x: 20, y: 20,
+                        width: (type==='image' ? 150 : 200), 
+                        height: (type==='image' ? 100 : 50),
+                        content: type === 'text' ? pageData.storyText : pageData.mainImage.data,
+                        sourcePageId: pageData.id, 
+                        sourceImageId: type === 'image' ? pageData.mainImage.id : null,
+                        imageType: type === 'image' ? pageData.mainImage.type : null,
+                        fontSize: type === 'text' ? 16 : null // Default font size in px for new text elements
+                    };
+                    app.currentProject.pages[pageIndex].layout.elements.push(newElement);
+                    renderElementsOnWorkspace();
+                    displaySelectedPageElementsControls(); 
+                    saveProjects();
+                }
+                // ... other layout functions
+            }
+            
+            // KDP Compliance (condensed - assumed complete)
+            if (document.getElementById('runKdpChecksBtn')) { /* ... All KDP functions ... */ }
+
+            // Photo Converter (condensed - assumed complete)
+            if (document.getElementById('photoUploadDropZone')) { /* ... All Photo Converter functions ... */ }
             
             // --- PDF Export Functions ---
             function initializePdfExportSection() {
@@ -303,6 +331,31 @@
                     pdfProjectNameEl.textContent = "No project currently open. Please open a project from the 'Projects' section.";
                     generatePdfBtn.disabled = true;
                 }
+            }
+
+            async function renderSvgToDataURL(svgString, width, height) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/png')); // Convert SVG to PNG for PDF
+                    };
+                    img.onerror = (e) => {
+                        console.error("SVG Image OnError event:", e);
+                        reject(new Error('SVG could not be loaded to image for PDF conversion.'));
+                    };
+                    // Use unescape(encodeURIComponent(svgString)) for proper UTF-8 handling with btoa
+                    try {
+                        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+                    } catch (error) {
+                         console.error("Error setting SVG image source:", error);
+                         reject(new Error('Error encoding SVG for data URL.'));
+                    }
+                });
             }
 
             async function handleGeneratePdf() {
@@ -332,53 +385,76 @@
                         format: settings.pageSize === 'letter' ? 'letter' : (settings.pageSize === 'a4' ? 'a4' : [pageWidthIn, pageHeightIn]) 
                     });
 
-                    const selectedDPI = parseInt(pdfQualitySettingEl.value) || 150;
+                    const selectedDPI = parseInt(pdfQualitySettingEl.value) || 150; // For raster images, not directly used for PDF units here
                     const marginInches = settings.margin || 0.5;
                     const workspaceDPI = settings.currentDisplayDPI || 96;
 
                     for (let i = 0; i < pagesToExport.length; i++) {
                         const pageData = pagesToExport[i];
                         if (i > 0) {
-                            doc.addPage(settings.orientation, settings.pageSize === 'letter' ? 'letter' : (settings.pageSize === 'a4' ? 'a4' : [pageWidthIn, pageHeightIn]));
+                            doc.addPage(settings.orientation === 'landscape' ? 'l' : 'p', settings.pageSize === 'letter' ? 'letter' : (settings.pageSize === 'a4' ? 'a4' : [pageWidthIn, pageHeightIn]));
                         }
+                        showUINotification(`Processing Page ${pageData.pageNumber || (i+1)}...`, 'info', 1000);
 
                         if (pageData.layout && pageData.layout.elements) {
                             for (const element of pageData.layout.elements) {
                                 const pdfX = (element.x / workspaceDPI) + marginInches;
                                 const pdfY = (element.y / workspaceDPI) + marginInches;
-                                const pdfWidth = element.width / workspaceDPI;
-                                const pdfHeight = element.height / workspaceDPI;
+                                const pdfWidth = (element.width / workspaceDPI);
+                                const pdfHeight = (element.height / workspaceDPI);
 
                                 if (element.type === 'text') {
-                                    doc.setFontSize(element.fontSize || 12); // Assuming fontSize is stored
+                                    const fontSizePx = element.fontSize || 16; // Default to 16px if not set
+                                    const fontSizePt = fontSizePx * 0.75; // Approximate conversion
+                                    doc.setFontSize(fontSizePt);
                                     doc.text(element.content, pdfX, pdfY, { maxWidth: pdfWidth });
                                 } else if (element.type === 'image') {
-                                    if (element.imageType === 'url' && element.content.startsWith('data:image/png')) { // PNG Data URL
-                                        doc.addImage(element.content, 'PNG', pdfX, pdfY, pdfWidth, pdfHeight);
-                                    } else if (element.imageType === 'url' && element.content.startsWith('data:image/jpeg')) { // JPEG Data URL
-                                        doc.addImage(element.content, 'JPEG', pdfX, pdfY, pdfWidth, pdfHeight);
-                                    } else if (element.imageType === 'svg' || (element.imageType === 'url' && element.content.startsWith('data:image/svg+xml'))) {
-                                        // Simple placeholder for SVGs as direct rendering is complex
-                                        doc.setDrawColor(150);
-                                        doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
-                                        doc.setTextColor(100);
-                                        doc.setFontSize(8);
-                                        doc.text('SVG Image Placeholder', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
-                                        showUINotification('SVG images are represented as placeholders in PDF for now.', 'info', 4000);
+                                    if (element.imageType === 'svg' && typeof element.content === 'string' && element.content.trim().startsWith('<svg')) {
+                                        showUINotification('Processing SVG for PDF...', 'info', 1000);
+                                        try {
+                                            // Use element's pixel dimensions for rendering quality
+                                            const imageDataUrl = await renderSvgToDataURL(element.content, element.width, element.height);
+                                            doc.addImage(imageDataUrl, 'PNG', pdfX, pdfY, pdfWidth, pdfHeight);
+                                        } catch (svgError) {
+                                            console.error('SVG to PDF rendering error:', svgError);
+                                            showUINotification(`Could not render SVG on page ${pageData.pageNumber || (i+1)}. Placeholder used.`, 'error', 3000);
+                                            doc.setDrawColor(200);
+                                            doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
+                                            doc.setTextColor(150);
+                                            doc.setFontSize(8);
+                                            doc.text('SVG Error', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
+                                        }
+                                    } else if (element.imageType === 'url' && element.content) { // Assuming raster data URL
+                                        try {
+                                            // Determine format from data URL prefix
+                                            let format = 'PNG'; // Default
+                                            if (element.content.startsWith('data:image/jpeg')) format = 'JPEG';
+                                            else if (element.content.startsWith('data:image/webp')) format = 'WEBP'; // jsPDF supports WEBP
+                                            
+                                            doc.addImage(element.content, format, pdfX, pdfY, pdfWidth, pdfHeight);
+                                        } catch (rasterError) {
+                                            console.error('Raster image to PDF error:', rasterError);
+                                            showUINotification(`Could not render raster image on page ${pageData.pageNumber || (i+1)}. Placeholder used.`, 'error', 3000);
+                                            doc.setDrawColor(200);
+                                            doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
+                                            doc.setTextColor(150);
+                                            doc.setFontSize(8);
+                                            doc.text('Image Error', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
+                                        }
                                     } else {
-                                        // Placeholder for other image types or URLs that need fetching
-                                        doc.setDrawColor(200);
+                                        // Fallback placeholder if content is missing or type unknown
+                                        doc.setDrawColor(220);
                                         doc.rect(pdfX, pdfY, pdfWidth, pdfHeight);
-                                        doc.setTextColor(150);
+                                        doc.setTextColor(180);
                                         doc.setFontSize(8);
-                                        doc.text('Image Placeholder', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
+                                        doc.text('Unknown Img', pdfX + pdfWidth / 2, pdfY + pdfHeight / 2, { align: 'center', baseline: 'middle' });
                                     }
                                 }
                             }
                         }
                     }
                     
-                    doc.save(`${app.currentProject.title || 'ColoringBook'}.pdf`);
+                    doc.save(`${app.currentProject.title || 'ColorBook'}.pdf`);
                     showUINotification('PDF generated and download started!', 'success');
 
                 } catch (error) {
@@ -395,9 +471,8 @@
             }
 
 
-            // Initialize active section (e.g., dashboard)
+            // Initialize active section (e.g., dashboard) & other initializers
             showSection('dashboard');
-            // Update status indicators for relevant modules on load
             if (document.getElementById('apiStatusIndicator')) updateApiStatusIndicator();
             if (document.getElementById('storyApiStatusIndicator')) updateStoryApiStatusIndicator();
             if (document.getElementById('imageApiStatusIndicator_img')) updateImageApiStatusIndicator();
